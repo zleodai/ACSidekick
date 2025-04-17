@@ -4,14 +4,16 @@ import acsys
 from third_party.sim_info import *
 
 #Internal
-from src.TelemetrySender import TelemetrySender as TelemetrySender
+from src.TelemetrySender import TelemetrySender
+from src.Utils import *
 
 #AC Docs https://docs.google.com/document/d/13trBp6K1TjWbToUQs_nfFsB291-zVJzRZCNaTYt4Dzc/pub
 
-#region GUI Globals
 appName = "ACSidekick"
-width, height = 335 , 400
-#endregion
+width, height = 400 , 400
+
+TemplateButton = None
+dynamicElements = []
 
 simInfo = SimInfo()
 
@@ -24,25 +26,15 @@ def acMain(ac_version):
 
     ac.addRenderCallback(appWindow, appGL) # -> links this app's window to an OpenGL render function
 
-    createLabels()
-    createButtons()
+    TemplateWindow = Image(appWindow, Vector2(200, 200), Vector2(400, 400), "apps\python\ACSidekick\data\Image.png")
+    TemplateLabel = Label(appWindow, Vector2(200, 50), "Testing App", 24)
+
+    global TemplateButton
+    TemplateButton = Button(appWindow, Vector2(200, 300), Vector2(100, 50), "press", 24)
+    ac.addOnClickedListener(TemplateButton.ref, testOnClick)
+    dynamicElements.append(TemplateButton)
 
     return appName
-
-def createLabels():
-    global TemplateLabel
-    TemplateLabel = ac.addLabel(appWindow, "Template")
-    ac.setPosition(TemplateLabel, 0, 0)
-    ac.setFontSize(TemplateLabel, 0)
-
-def createButtons():
-    global TemplateButton
-    TemplateButton = ac.addButton(appWindow, "\nTemplate")
-    ac.setPosition(TemplateButton, 0, 0)
-    ac.setSize(TemplateButton, 0, 0)
-    ac.setFontSize(TemplateButton, 0)
-    ac.setFontAlignment(TemplateButton, "center")
-    # ac.addOnClickedListener(TemplateButton, templateButtonPress)
 
 def appGL(deltaT):#-------------------------------- OpenGL UPDATE
     """
@@ -51,17 +43,12 @@ def appGL(deltaT):#-------------------------------- OpenGL UPDATE
     """
     pass # -> Delete this line if you do something here !
 
-def updateLabels():
-    pass
-
-def updateButtons():
-    pass
+def testOnClick(x, y):
+    TemplateButton.onClick()
 
 def acUpdate(deltaT):#-------------------------------- AC UPDATE
     global currentTime
     global nextInsertTimestamp
 
-    currentTime += deltaT
-
-    updateLabels()
-    updateButtons()
+    for element in dynamicElements:
+        element.update(deltaT)
