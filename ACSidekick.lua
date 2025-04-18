@@ -45,7 +45,6 @@ end
 
 function script.onWindowUpdate(dt)
   -- On Window Update
-  AppDraw()
 end
 
 function script.update(dt)
