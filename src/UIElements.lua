@@ -26,12 +26,14 @@ function UIElement:addText(text, size, p1, p2)
     table.insert(self.internalElements, textElement)
 end
 
-function UIElement:addImage(imageSrc, p1, p2)
+function UIElement:addImage(imageSrc, p1, p2, rotation, pivot)
     local imageElement = {
         type = "imageElement",
         imageSrc = imageSrc,
         p1 = p1,
-        p2 = p2
+        p2 = p2,
+        rotation = rotation,
+        pivot = pivot
     }
     table.insert(self.internalElements, imageElement)
 end
@@ -55,7 +57,9 @@ function UIElement:draw()
             if element.type == "textElement" then
                 ui.dwriteDrawTextClipped(element.text, element.fontSize, element.p1, element.p2, ui.Alignment.Center, ui.Alignment.Center)
             elseif element.type == "imageElement" then
+                ui.beginRotation()
                 ui.drawImage(element.imageSrc, element.p1, element.p2)
+                ui.endPivotRotation(element.rotation, element.pivot)
             elseif element.type == "uiElement" then
                 element.drawWithOffset(self.pos)
             end
