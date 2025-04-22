@@ -4,6 +4,10 @@ TelemetryCollector = require(".src/TelemetryCollector")
 alreadyStart = false
 windowActive = false
 uiState = ac.getUI()
+time = 0
+
+uploadPacketInterval = 0.01
+uploadPacketStep = uploadPacketInterval
 
 ---@type UIElement[]
 activeElements = {}
@@ -68,7 +72,7 @@ function script.onShowWindow()
     -- TelemetryCollection
 
     ---@type DBLink
-    dbLink = DBLink:new("http://localhost:8090")
+    dbLink = DBLink:new(8090)
 
     alreadyStart = true
     guiInitalized = false
@@ -90,7 +94,6 @@ function script.onWindowUpdate(dt)
       AppInfo = window
     end
   end
-  ac.debug("windowInfo", AppInfo)
 
   windowSize = AppInfo.size
   defaultTitleFontSize = (windowSize.x * 0.1 + windowSize.y * 0.9)/32
@@ -136,11 +139,22 @@ function script.onWindowUpdate(dt)
 
     guiInitalized = true
   end
+
+  time = time + dt
 end
 
 function script.update(dt)
   if collectingData then
 
+    if time > uploadPacketStep then
+      playerCar = ac.getCar(0)
+      if not playerCar then return end
+
+      packet = CreatePacket(0, 0, 0, os.date("%m/%d/%Y %X", os.time()) .. string.format(":%d", (time - math.floor(time))*1000), playerCar)
+
+      uploadPacketStep = time + uploadPacketInterval
+      dbLink:uploadPacket(packet)
+    end
   end
 end
 
@@ -156,7 +170,7 @@ function script.preRenderUIUpdate()
   -- Called before rendering ImGui apps to draw things on screen
 
   if windowActive then
-      uiState = ac.getUI()
+    uiState = ac.getUI()
 
       if guiInitalized then
       -- map scaling update
