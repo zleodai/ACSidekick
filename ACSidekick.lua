@@ -1,63 +1,56 @@
+---@diagnostic disable: duplicate-set-field
+
 UIElements = require(".src/UIElements")
 TelemetryCollector = require(".src/TelemetryCollector")
+Util = require(".src/Util")
 
-alreadyStart = false
+initalized = false
+guiInitalized = false
+collectingData = false
 windowActive = false
-uiState = ac.getUI()
-time = 0
 
+time = 0
 uploadPacketInterval = 0.01
 uploadPacketStep = uploadPacketInterval
 
 ---@type UIElement[]
-activeElements = {}
-buttonElements = {}
+visibleElements = {}
 
-direction = {
-  n = vec2(0, 1),
-  ne = vec2(math.sqrt(0.5), math.sqrt(0.5)),
-  e = vec2(1, 0),
-  se = vec2(math.sqrt(0.5), -math.sqrt(0.5)),
-  s = vec2(0, -1),
-  sw = vec2(-math.sqrt(0.5), -math.sqrt(0.5)),
-  w = vec2(-1, 0),
-  nw = vec2(-math.sqrt(0.5), math.sqrt(0.5))
-}
+---@type UIElement[]
+clickableElements = {}
 
 function script.onShowWindow()
   -- Window Opened
   windowActive = true
 
-  if not alreadyStart then
+  if not initalized then
     -- Load configs/defaultValues
 
     ini = ac.getFolder(ac.FolderID.ContentTracks) .. '/' .. ac.getTrackFullID('/') .. '/data/map.ini'
     config = ac.INIConfig.load(ini):mapSection('PARAMETERS', { SCALE_FACTOR = 1, Z_OFFSET = 1, X_OFFSET = 1, WIDTH=500, HEIGHT=500, MARGIN=20, DRAWING_SIZE=10, MAX_SIZE=1000})
     config.OFFSETS = vec2(config.X_OFFSET, config.Z_OFFSET)
 
+    uiState = ac.getUI()
     displaySize = uiState.windowSize
 
-    -- UI Element Setup
 
-    ---@type UIElement[]
-    activeElements = {}
+    -- UI Element Setup
 
     ---@type UIElement
     dataCollectionDisplay = UIElement:new()
     dataCollectionDisplay:setBackground(rgbm(0.1, 0.1, 0.1, 1))
-    table.insert(activeElements, dataCollectionDisplay)
+    table.insert(visibleElements, dataCollectionDisplay)
 
     ---@type UIElement
     collectDataButton = UIElement:new()
-    table.insert(activeElements, collectDataButton)
-    table.insert(buttonElements, collectDataButton)
-    collectingData = false
+    table.insert(visibleElements, collectDataButton)
+    table.insert(clickableElements, collectDataButton)
     packetsSent = 0
 
     ---@type UIElement
     mapDisplay = UIElement:new()
     mapDisplay:setBackground(rgbm(0.1, 0.1, 0.1, 1))
-    table.insert(activeElements, mapDisplay)
+    table.insert(visibleElements, mapDisplay)
 
     local map_mini = ac.getFolder(ac.FolderID.ContentTracks) .. '\\' .. ac.getTrackFullID('\\') .. '\\map_mini.png'
     local map = ac.getFolder(ac.FolderID.ContentTracks) .. '\\' .. ac.getTrackFullID('\\') .. '\\map.png'
@@ -69,13 +62,15 @@ function script.onShowWindow()
 
     playerCar = ac.getCar(0)
 
+
     -- TelemetryCollection
 
-    ---@type DBLink
-    dbLink = DBLink:new(8090)
+    dbPort = 8090
 
-    alreadyStart = true
-    guiInitalized = false
+    ---@type DBLink
+    dbLink = DBLink:new(dbPort)
+
+    initalized = true
   end
 end
 
@@ -87,7 +82,8 @@ end
 function script.onWindowUpdate(dt)
   -- On Window Update
 
-  if not alreadyStart then return end
+  if not initalized then return end
+
   local windows = ac.getAppWindows()
   for _, window in pairs(windows) do
     if window.title == "ACSidekick" then
@@ -144,8 +140,11 @@ function script.onWindowUpdate(dt)
 end
 
 function script.update(dt)
-  if collectingData then
+  -- On Script Update 
 
+  if not initalized then return end
+
+  if collectingData then
     if time > uploadPacketStep then
       playerCar = ac.getCar(0)
       if not playerCar then return end
@@ -156,6 +155,9 @@ function script.update(dt)
       dbLink:uploadPacket(packet)
     end
   end
+
+  -- Write up your own backend with golang to store the telemetry data with SQLite
+  
 end
 
 function script.scenePreRenderUpdate()
@@ -172,7 +174,7 @@ function script.preRenderUIUpdate()
   if windowActive then
     uiState = ac.getUI()
 
-      if guiInitalized then
+    if guiInitalized then
       -- map scaling update
       if uiState.mouseWheel ~= 0 then
         if (uiState.mousePos.x > AppInfo.position.x and uiState.mousePos.y > AppInfo.position.y and uiState.mousePos.x < (AppInfo.position + AppInfo.size).x and uiState.mousePos.y < (AppInfo.position + AppInfo.size).y) then
@@ -182,11 +184,11 @@ function script.preRenderUIUpdate()
       
       ui.pushDWriteFont(ui.DWriteFont("Chakra Petch;Weight=Light;", "./data"))
 
-      for _, element in pairs(activeElements) do
+      for _, element in pairs(visibleElements) do
         element:draw()
       end
 
-      for _, element in pairs(buttonElements) do
+      for _, element in pairs(clickableElements) do
         if (uiState.isMouseLeftKeyClicked) then
           if (uiState.mousePos.x > element.pos.x and uiState.mousePos.y > element.pos.y and uiState.mousePos.x < (element.pos + element.size).x and uiState.mousePos.y < (element.pos + element.size).y) then
             element.onClick = true

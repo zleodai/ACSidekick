@@ -27,6 +27,7 @@ function DBLink:uploadPacket(packet)
         outputString = outputString .. string.format("\n\nBody:\n%s",body)
         outputString = outputString .. string.format("\n\nHeader:\n%s", '"Content-Type" = "text/csv"')
         outputString = outputString .. string.format("\n\nAttempt Result:\n%s", response.body)
+        ac.log(outputString)
         file = io.open("luaLog.txt", "w")
         file:write(outputString)
         file:close()
@@ -40,7 +41,7 @@ function ToCSV(packet)
     for k, v in pairs(packet) do
         csvHeaders = csvHeaders .. string.format("%s,", tostring(k))
         if (type(v) == "number") then
-            csvData = csvData .. string.format("%s, ", string.format("%0.5f", v))
+            csvData = csvData .. string.format("%s, ", string.format("%s", v))
         else
             csvData = csvData .. string.format("%s, ", v)
         end
