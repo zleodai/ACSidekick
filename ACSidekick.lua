@@ -1,8 +1,8 @@
 ---@diagnostic disable: duplicate-set-field
 
-UIElements = require(".src/UIElements")
-TelemetryCollector = require(".src/TelemetryCollector")
-Util = require(".src/Util")
+UIElements = require(".app/lua/ui_elements")
+TelemetryCollector = require(".app/lua/telemetry_collector")
+Util = require(".app/lua/util")
 
 initalized = false
 guiInitalized = false
@@ -65,7 +65,7 @@ function script.onShowWindow()
 
     -- TelemetryCollection
 
-    dbPort = 8090
+    dbPort = 8091
 
     ---@type DBLink
     dbLink = DBLink:new(dbPort)
