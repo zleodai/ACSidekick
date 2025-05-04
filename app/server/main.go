@@ -31,6 +31,9 @@ func main() {
 	router.HandleFunc("/sqliteQuery", func(w http.ResponseWriter, r *http.Request) {
 		handlers.SqliteQuery(w, r, db)
 	}).Methods("GET")
+	router.HandleFunc("/test", func(w http.ResponseWriter, r *http.Request) {
+		handlers.Test();
+	}).Methods("POST")
 	router.HandleFunc("/appendCSV", func(w http.ResponseWriter, r *http.Request) {
 		handlers.AppendCSV(w, r, db)
 	}).Methods("POST")

@@ -89,6 +89,9 @@ func SqliteQuery(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		json.NewEncoder(w).Encode(results)
 	}
 }
+func Test() {
+	fmt.Printf("test")
+}
 func AppendCSV(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Only POST method is allowed", http.StatusMethodNotAllowed)
@@ -97,14 +100,10 @@ func AppendCSV(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
 	var currentPacketID int
 	err := db.QueryRow("SELECT MAX(PacketID) FROM PacketInfo").Scan(&currentPacketID)
-	if err != nil && err != sql.ErrNoRows {
-		http.Error(w, fmt.Sprintf("Failed to get max PacketID: %s", err.Error()), http.StatusInternalServerError)
+	if err != nil {
 		currentPacketID = 0
 	}
-	if err == sql.ErrNoRows {
-		log.Println("No Rows Found PacketID set to 0")
-		currentPacketID = 0 // No existing packets, start from 0
-	}
+
 
 	csvReader := csv.NewReader(r.Body) // Read from request body
 	defer r.Body.Close()               // Close request body after reading
@@ -122,6 +121,13 @@ func AppendCSV(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		return
 	}
 
+	fmt.Printf("Recieved CSV:")
+	for _, header := range records {
+		fmt.Printf("\n")
+		for _, content := range header {
+			fmt.Printf("%s ", content)
+		}
+	}
 
 	tx, err := db.Begin()
 	if err != nil {
@@ -194,6 +200,7 @@ func AppendCSV(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		return
 	}
 
+	fmt.Printf("Csv data appended")
 	responseMessage := fmt.Sprintf("CSV data appended successfully. Inserted %d new rows, re-assigned PacketIDs starting from %d.", insertedRowCount, currentPacketID+1)
 	log.Println(responseMessage)
 	w.WriteHeader(http.StatusOK)
