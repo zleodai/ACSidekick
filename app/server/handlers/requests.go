@@ -12,15 +12,18 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-var tableSchemas = map[string][]string {
+var telemetrySchemas = map[string][]string {
 	"PacketInfo": { "PacketID", "LapID", "PacketDatetime" },
-	"LapInfo": { "LapID", "LapTime", "SectorConfiguration", "TrackName", "TrackConfiguration", "DriverName", "CarName", "PacketIDtart", "PacketIDEnd" },
-	"SectorInfo": { "LapID", "SectorID", "SectorTime", "SectorStartPosX", "SectorStartPosY", "SectorEndPosX", "SectorEndPosY" },
 	"DriverInputs": { "PacketID", "Gas", "Brake", "Steer", "Clutch", "Handbrake", "Gear" },
 	"CarState": { "PacketID", "Fuel", "SpeedMPH", "RPM", "EngagedGear", "TurboBoost", "Weight", "WorldPositionX", "WorldPositionY", "WorldPositionZ", "AngularVelocityX", "AngularVelocityY", "AngularVelocityZ", "VelocityX", "VelocityY", "VelocityZ", "AccelerationX", "AccelerationY", "AccelerationZ", "Aero_DragCoeffcient", "Aero_LiftCoefficientFront", "Aero_LiftCoefficientRear", "CarForwardVectorX", "CarForwardVectorY", "CarForwardVectorZ", "CarSideVectorX", "CarSideVectorY", "CarSideVectorZ" },
 	"ACState": { "PacketID", "ResetCount", "CollidedWith", "HeadlightsActive", "ping", "steerTorque" },
 	"TireInfo": { "PacketID", "FL_Camber", "FR_Camber", "RL_Camber", "RR_Camber", "FL_ToeIn", "FR_ToeIn", "RL_ToeIn", "RR_ToeIn", "FL_TyreRadius", "FR_TyreRadius", "RL_TyreRadius", "RR_TyreRadius", "FL_TyreWidth", "FR_TyreWidth", "RL_TyreWidth", "RR_TyreWidth", "FL_RimRadius", "FR_RimRadius", "RL_RimRadius", "RR_RimRadius" },
 	"TireState": { "PacketID", "FL_TyreWear", "FR_TyreWear", "RL_TyreWear", "RR_TyreWear", "FL_TyreVirtualMPH", "FR_TyreVirtualMPH", "RL_TyreVirtualMPH", "RR_TyreVirtualMPH", "FL_TyreDirtyLevel", "FR_TyreDirtyLevel", "RL_TyreDirtyLevel", "RR_TyreDirtyLevel", "FL_Slip", "FR_Slip", "RL_Slip", "RR_Slip", "FL_SlipAngle", "FR_SlipAngle", "RL_SlipAngle", "RR_SlipAngle", "FL_SlipRatio", "FR_SlipRatio", "RL_SlipRatio", "RR_SlipRatio", "FL_NDSlip", "FR_NDSlip", "RL_NDSlip", "RR_NDSlip", "FL_Load", "FR_Load", "RL_Load", "RR_Load", "FL_CoreTemperature", "FR_CoreTemperature", "RL_CoreTemperature", "RR_CoreTemperature", "FL_TyreInsideTemperature", "FR_TyreInsideTemperature", "RL_TyreInsideTemperature", "RR_TyreInsideTemperature", "FL_TyreMiddleTemperature", "FR_TyreMiddleTemperature", "RL_TyreMiddleTemperature", "RR_TyreMiddleTemperature", "FL_TyreOutsideTemperature", "FR_TyreOutsideTemperature", "RL_TyreOutsideTemperature", "RR_TyreOutsideTemperature", "FL_TyreOptimumTemperature", "FR_TyreOptimumTemperature", "RL_TyreOptimumTemperature", "RR_TyreOptimumTemperature", "FL_TemperatureMultiplier", "FR_TemperatureMultiplier", "RL_TemperatureMultiplier", "RR_TemperatureMultiplier", "FL_StaticPressure", "FR_StaticPressure", "RL_StaticPressure", "RR_StaticPressure", "FL_DynamicPressure", "FR_DynamicPressure", "RL_DynamicPressure", "RR_DynamicPressure", "FL_SelfAligningTorque", "FR_SelfAligningTorque", "RL_SelfAligningTorque", "RR_SelfAligningTorque", "FL_TyreContactNormalX", "FL_TyreContactNormalY", "FL_TyreContactNormalZ", "FR_TyreContactNormalX", "FR_TyreContactNormalY", "FR_TyreContactNormalZ", "RL_TyreContactNormalX", "RL_TyreContactNormalY", "RL_TyreContactNormalZ", "RR_TyreContactNormalX", "RR_TyreContactNormalY", "RR_TyreContactNormalZ" },
+}
+
+var lapSectorSchemas = map[string][]string {
+	"LapInfo": { "LapID", "LapTime", "SectorConfiguration", "TrackName", "TrackConfiguration", "DriverName", "CarName", "PacketIDtart", "PacketIDEnd" },
+	"SectorInfo": { "LapID", "SectorID", "SectorTime", "SectorStartPosX", "SectorStartPosY", "SectorEndPosX", "SectorEndPosY" },
 }
 
 func SqliteQuery(w http.ResponseWriter, r *http.Request, db *sql.DB) {
@@ -89,10 +92,7 @@ func SqliteQuery(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		json.NewEncoder(w).Encode(results)
 	}
 }
-func Test() {
-	fmt.Printf("test")
-}
-func AppendCSV(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func AppendTelemetryCSV(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Only POST method is allowed", http.StatusMethodNotAllowed)
 		return
@@ -121,11 +121,10 @@ func AppendCSV(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		return
 	}
 
-	fmt.Printf("Recieved CSV:")
+	fmt.Printf("\n\nRecieved CSV:")
 	for _, header := range records {
-		fmt.Printf("\n")
 		for _, content := range header {
-			fmt.Printf("%s ", content)
+			fmt.Printf("%s\n", content)
 		}
 	}
 
@@ -147,7 +146,7 @@ func AppendCSV(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 			return
 		}
 
-		for tableName, schema := range tableSchemas {
+		for tableName, schema := range telemetrySchemas {
 			tableHeaders := make([]string, 0)
 			tableValues := make([]string, 0)
 
