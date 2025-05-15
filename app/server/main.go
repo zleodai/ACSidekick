@@ -31,11 +31,8 @@ func main() {
 	router.HandleFunc("/sqliteQuery", func(w http.ResponseWriter, r *http.Request) {
 		handlers.SqliteQuery(w, r, db)
 	}).Methods("GET")
-	router.HandleFunc("/test", func(w http.ResponseWriter, r *http.Request) {
-		handlers.Test();
-	}).Methods("POST")
-	router.HandleFunc("/appendCSV", func(w http.ResponseWriter, r *http.Request) {
-		handlers.AppendCSV(w, r, db)
+	router.HandleFunc("/appendTelemetryCSV", func(w http.ResponseWriter, r *http.Request) {
+		handlers.AppendTelemetryCSV(w, r, db)
 	}).Methods("POST")
 
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), router))
