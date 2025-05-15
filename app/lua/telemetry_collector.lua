@@ -22,19 +22,11 @@ function DBLink:uploadPacket(packet)
     outputString = string.format("Inserting into DB at time: %0.3f", time)
 
     web.post(url, header, body, function (err, response)
-        -- outputString = outputString .. string.format("\n\nPacketID:\n%s", packetID)
-        -- outputString = outputString .. string.format("\n\nUrl:\n%s",url)
-        -- outputString = outputString .. string.format("\n\nBody:\n%s",body)
-        -- outputString = outputString .. string.format("\n\nHeader:\n%s", '"Content-Type" = "text/csv"')
         outputString = outputString .. string.format("\n\nResponse:\n%s", response.body)
         if err ~= nil then
             outputString = outputString .. string.format("\n\nError:\n%s", err.dump())
         end
     end)
-
-    test = io.open("./apps/lua/ACSidekick/test.csv", "w")
-    test:write(body)
-    test:close()
     
     ac.log(outputString)
 
