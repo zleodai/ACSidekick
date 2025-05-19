@@ -5,8 +5,8 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
+	"strconv"
 	"strings"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -16,7 +16,7 @@ var telemetrySchemas = map[string][]string {
 	"PacketInfo": { "PacketID", "LapID", "PacketDatetime" },
 	"DriverInputs": { "PacketID", "Gas", "Brake", "Steer", "Clutch", "Handbrake", "Gear" },
 	"CarState": { "PacketID", "Fuel", "SpeedMPH", "RPM", "EngagedGear", "TurboBoost", "Weight", "WorldPositionX", "WorldPositionY", "WorldPositionZ", "AngularVelocityX", "AngularVelocityY", "AngularVelocityZ", "VelocityX", "VelocityY", "VelocityZ", "AccelerationX", "AccelerationY", "AccelerationZ", "Aero_DragCoeffcient", "Aero_LiftCoefficientFront", "Aero_LiftCoefficientRear", "CarForwardVectorX", "CarForwardVectorY", "CarForwardVectorZ", "CarSideVectorX", "CarSideVectorY", "CarSideVectorZ" },
-	"ACState": { "PacketID", "ResetCount", "CollidedWith", "HeadlightsActive", "ping", "steerTorque" },
+	"ACState": { "PacketID", "ResetCount", "CollidedWith", "HeadlightsActive", "Ping", "SteerTorque" },
 	"TireInfo": { "PacketID", "FL_Camber", "FR_Camber", "RL_Camber", "RR_Camber", "FL_ToeIn", "FR_ToeIn", "RL_ToeIn", "RR_ToeIn", "FL_TyreRadius", "FR_TyreRadius", "RL_TyreRadius", "RR_TyreRadius", "FL_TyreWidth", "FR_TyreWidth", "RL_TyreWidth", "RR_TyreWidth", "FL_RimRadius", "FR_RimRadius", "RL_RimRadius", "RR_RimRadius" },
 	"TireState": { "PacketID", "FL_TyreWear", "FR_TyreWear", "RL_TyreWear", "RR_TyreWear", "FL_TyreVirtualMPH", "FR_TyreVirtualMPH", "RL_TyreVirtualMPH", "RR_TyreVirtualMPH", "FL_TyreDirtyLevel", "FR_TyreDirtyLevel", "RL_TyreDirtyLevel", "RR_TyreDirtyLevel", "FL_Slip", "FR_Slip", "RL_Slip", "RR_Slip", "FL_SlipAngle", "FR_SlipAngle", "RL_SlipAngle", "RR_SlipAngle", "FL_SlipRatio", "FR_SlipRatio", "RL_SlipRatio", "RR_SlipRatio", "FL_NDSlip", "FR_NDSlip", "RL_NDSlip", "RR_NDSlip", "FL_Load", "FR_Load", "RL_Load", "RR_Load", "FL_CoreTemperature", "FR_CoreTemperature", "RL_CoreTemperature", "RR_CoreTemperature", "FL_TyreInsideTemperature", "FR_TyreInsideTemperature", "RL_TyreInsideTemperature", "RR_TyreInsideTemperature", "FL_TyreMiddleTemperature", "FR_TyreMiddleTemperature", "RL_TyreMiddleTemperature", "RR_TyreMiddleTemperature", "FL_TyreOutsideTemperature", "FR_TyreOutsideTemperature", "RL_TyreOutsideTemperature", "RR_TyreOutsideTemperature", "FL_TyreOptimumTemperature", "FR_TyreOptimumTemperature", "RL_TyreOptimumTemperature", "RR_TyreOptimumTemperature", "FL_TemperatureMultiplier", "FR_TemperatureMultiplier", "RL_TemperatureMultiplier", "RR_TemperatureMultiplier", "FL_StaticPressure", "FR_StaticPressure", "RL_StaticPressure", "RR_StaticPressure", "FL_DynamicPressure", "FR_DynamicPressure", "RL_DynamicPressure", "RR_DynamicPressure", "FL_SelfAligningTorque", "FR_SelfAligningTorque", "RL_SelfAligningTorque", "RR_SelfAligningTorque", "FL_TyreContactNormalX", "FL_TyreContactNormalY", "FL_TyreContactNormalZ", "FR_TyreContactNormalX", "FR_TyreContactNormalY", "FR_TyreContactNormalZ", "RL_TyreContactNormalX", "RL_TyreContactNormalY", "RL_TyreContactNormalZ", "RR_TyreContactNormalX", "RR_TyreContactNormalY", "RR_TyreContactNormalZ" },
 }
@@ -101,9 +101,12 @@ func AppendTelemetryCSV(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	var currentPacketID int
 	err := db.QueryRow("SELECT MAX(PacketID) FROM PacketInfo").Scan(&currentPacketID)
 	if err != nil {
+		fmt.Printf("\n%s", err.Error())
 		currentPacketID = 0
 	}
+	fmt.Printf("\nCurrent PacketID: %d", currentPacketID)
 
+	//Something wrong with getting max packetID
 
 	csvReader := csv.NewReader(r.Body) // Read from request body
 	defer r.Body.Close()               // Close request body after reading
@@ -121,13 +124,6 @@ func AppendTelemetryCSV(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		return
 	}
 
-	fmt.Printf("\n\nRecieved CSV:")
-	for _, header := range records {
-		for _, content := range header {
-			fmt.Printf("%s\n", content)
-		}
-	}
-
 	tx, err := db.Begin()
 	if err != nil {
 		http.Error(w, "Failed to begin transaction", http.StatusInternalServerError)
@@ -137,7 +133,7 @@ func AppendTelemetryCSV(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
 	insertedRowCount := 0
 	headerRow := records[0]
-	for i, record := range records[1:] { // Skip header row
+	for i, record := range records[1:] {
 		currentPacketID++
 		insertedRowCount++
 		
@@ -147,61 +143,41 @@ func AppendTelemetryCSV(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		}
 
 		for tableName, schema := range telemetrySchemas {
-			tableHeaders := make([]string, 0)
-			tableValues := make([]string, 0)
+			tableHeaders := make([]string, len(schema))
+			tableValues := make([]string, len(schema))
 
+			tableIndex := 0
+			
 			for colIdx, header := range headerRow {
 				for _, schemaCol := range schema {
 					if strings.EqualFold(header, schemaCol) {
 						value := record[colIdx]
 						if header == "PacketID" {
-							tableHeaders = append(tableHeaders, header)
-							tableValues = append(tableValues, string(currentPacketID))
+							tableHeaders[tableIndex] = header
+							tableValues[tableIndex] = strconv.Itoa(currentPacketID)
+							tableIndex++
 						} else if value != "" { 
-							tableHeaders = append(tableHeaders, header)
+							tableHeaders[tableIndex] = header
+							tableValues[tableIndex] = record[colIdx]
+							tableIndex++
 						}
 						break 
 					}
 				}
 			}
-
-			if len(tableHeaders) > 0 { // Only insert if there are columns for this table in the current row
-				valuePlaceholders := make([]string, len(tableHeaders))
-				for i := range tableHeaders {
-					valuePlaceholders[i] = "?"
-				}
-				insertQuery := "INSERT INTO " + tableName + " (" + strings.Join(tableHeaders, ", ") + ") VALUES (" + strings.Join(valuePlaceholders, ", ") + ")"
-
-				stmt, err := tx.Prepare(insertQuery)
+			if len(tableHeaders) == len(schema) {
+				insertQuery := "INSERT INTO " + tableName + " (" + strings.Join(tableHeaders, ", ") + ") VALUES (" + strings.Join(tableValues, ", ") + ");"
+				
+				_, err := tx.Exec(insertQuery)
 				if err != nil {
-					http.Error(w, fmt.Sprintf("Failed to prepare insert statement for table '%s': %s", tableName, err.Error()), http.StatusInternalServerError)
-					return
-				}
-				defer stmt.Close()
-
-				var args []interface{}
-				for _, val := range tableValues {
-					args = append(args, val)
-				}
-
-				_, err = stmt.Exec(args...)
-				if err != nil {
-					http.Error(w, fmt.Sprintf("Failed to execute insert statement for table '%s' in row %d: %s", tableName, i+2, err.Error()), http.StatusInternalServerError)
+					http.Error(w, fmt.Sprintf("Failed to insert into table '%s': %s", tableName, err.Error()), http.StatusInternalServerError)
 					return
 				}
 			}
 		}
 	}
-
-	err = tx.Commit()
-	if err != nil {
-		http.Error(w, "Failed to commit transaction", http.StatusInternalServerError)
-		return
-	}
-
-	fmt.Printf("Csv data appended")
-	responseMessage := fmt.Sprintf("CSV data appended successfully. Inserted %d new rows, re-assigned PacketIDs starting from %d.", insertedRowCount, currentPacketID+1)
-	log.Println(responseMessage)
+	responseMessage := fmt.Sprintf("\nCSV data appended successfully. Inserted %d new rows, re-assigned PacketIDs starting from %d.", insertedRowCount, currentPacketID+1)
+	fmt.Println(responseMessage)
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(responseMessage))
 }

@@ -13,22 +13,22 @@ end
 
 ---@param packet table
 function DBLink:uploadPacket(packet)
-    url = string.format("http://localhost:%d/appendCSV", self.port)
+    url = string.format("http://localhost:%d/appendTelemetryCSV", self.port)
     body = ToCSV(packet)
     header = {
         ["Content-Type"] = "text/csv"
     }
     packetID = packet.PacketID
-    outputString = string.format("Inserting into DB at time: %0.3f", time)
+    outputString = string.format("\nInserting into DB at time: %0.3f", time)
 
     web.post(url, header, body, function (err, response)
         outputString = outputString .. string.format("\n\nResponse:\n%s", response.body)
         if err ~= nil then
             outputString = outputString .. string.format("\n\nError:\n%s", err.dump())
         end
+        ac.log(outputString)
     end)
     
-    ac.log(outputString)
 
 end
 
@@ -39,12 +39,12 @@ function ToCSV(packet)
     for k, v in pairs(packet) do
         csvHeaders = csvHeaders .. string.format("%s,", tostring(k))
         if (type(v) == "number") then
-            csvData = csvData .. string.format("%s, ", string.format("%s", v))
+            csvData = csvData .. string.format("%s,", string.format("%s", v))
         else
-            csvData = csvData .. string.format("%s, ", v)
+            csvData = csvData .. string.format("%s,", v)
         end
     end
-    return csvHeaders .. "\n" .. csvData
+    return string.sub(csvHeaders, 1, -2) .. "\n" .. string.sub(csvData, 1, -2)
 end
 
 ---@param packetID number
@@ -102,8 +102,8 @@ function CreatePacket(packetID, sessionID, lapID, time, data)
     packet.ResetCount = data.resetCounter
     packet.CollidedWith = data.collidedWith
     packet.HeadlightsActive = data.headlightsActive
-    packet.ping = data.ping
-    packet.steerTorque = data.steerTorque
+    packet.Ping = data.ping
+    packet.SteerTorque = data.steerTorque
 
     wheelData = playerCar.wheels
 

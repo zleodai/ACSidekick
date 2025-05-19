@@ -149,7 +149,7 @@ function script.update(dt)
       playerCar = ac.getCar(0)
       if not playerCar then return end
 
-      packet = CreatePacket(0, 0, 0, os.date("%m/%d/%Y %X", os.time()) .. string.format(":%d", (time - math.floor(time))*1000), playerCar)
+      packet = CreatePacket(0, 0, 0, "'" .. os.date("%m/%d/%Y %X", os.time()) .. string.format(":%d", (time - math.floor(time))*1000) .. "'", playerCar)
 
       uploadPacketStep = time + uploadPacketInterval
       dbLink:uploadPacket(packet)

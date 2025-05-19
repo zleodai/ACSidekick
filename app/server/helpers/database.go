@@ -80,8 +80,8 @@ func SetupDatabaseSchema(db *sql.DB) error {
 			ResetCount Integer,
 			CollidedWith Integer,
 			HeadlightsActive BOOL,
-			ping REAL,
-			steerTorque REAL
+			Ping REAL,
+			SteerTorque REAL
 		);
 
 		CREATE TABLE IF NOT EXISTS TireInfo (
