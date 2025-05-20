@@ -99,14 +99,12 @@ func AppendTelemetryCSV(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	}
 
 	var currentPacketID int
-	err := db.QueryRow("SELECT MAX(PacketID) FROM PacketInfo").Scan(&currentPacketID)
+	err := db.QueryRow("SELECT MAX(PacketID) AS CURRENTPACKETID FROM PacketInfo;").Scan(&currentPacketID)
 	if err != nil {
 		fmt.Printf("\n%s", err.Error())
 		currentPacketID = 0
 	}
 	fmt.Printf("\nCurrent PacketID: %d", currentPacketID)
-
-	//Something wrong with getting max packetID
 
 	csvReader := csv.NewReader(r.Body) // Read from request body
 	defer r.Body.Close()               // Close request body after reading
@@ -166,16 +164,47 @@ func AppendTelemetryCSV(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 				}
 			}
 			if len(tableHeaders) == len(schema) {
-				insertQuery := "INSERT INTO " + tableName + " (" + strings.Join(tableHeaders, ", ") + ") VALUES (" + strings.Join(tableValues, ", ") + ");"
+				// insertQuery := "INSERT INTO " + tableName + " (" + strings.Join(tableHeaders, ", ") + ") VALUES (" + strings.Join(tableValues, ", ") + ");"
 				
-				_, err := tx.Exec(insertQuery)
+				// _, err := tx.Exec(insertQuery)
+				// if err != nil {
+				// 	fmt.Printf("Failed to insert into table '%s': %s", tableName, err.Error())
+				// 	http.Error(w, fmt.Sprintf("Failed to insert into table '%s': %s", tableName, err.Error()), http.StatusInternalServerError)
+				// 	return
+				// }
+				valuePlaceholders := make([]string, len(tableHeaders))
+				for i := range tableHeaders {
+					valuePlaceholders[i] = "?"
+				}
+				insertQuery := "INSERT INTO " + tableName + " (" + strings.Join(tableHeaders, ", ") + ") VALUES (" + strings.Join(valuePlaceholders, ", ") + ")"
+
+				stmt, err := tx.Prepare(insertQuery)
 				if err != nil {
-					http.Error(w, fmt.Sprintf("Failed to insert into table '%s': %s", tableName, err.Error()), http.StatusInternalServerError)
+					http.Error(w, fmt.Sprintf("Failed to prepare insert statement for table '%s': %s", tableName, err.Error()), http.StatusInternalServerError)
+					return
+				}
+				defer stmt.Close()
+
+				var args []interface{}
+				for _, val := range tableValues {
+					args = append(args, val)
+				}
+
+				_, err = stmt.Exec(args...)
+				if err != nil {
+					http.Error(w, fmt.Sprintf("Failed to execute insert statement for table '%s' in row %d: %s", tableName, i+2, err.Error()), http.StatusInternalServerError)
 					return
 				}
 			}
 		}
 	}
+
+	err = tx.Commit()
+	if err != nil {
+		http.Error(w, "Failed to commit transaction", http.StatusInternalServerError)
+		return
+	}
+	
 	responseMessage := fmt.Sprintf("\nCSV data appended successfully. Inserted %d new rows, re-assigned PacketIDs starting from %d.", insertedRowCount, currentPacketID+1)
 	fmt.Println(responseMessage)
 	w.WriteHeader(http.StatusOK)

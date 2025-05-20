@@ -10,7 +10,7 @@ collectingData = false
 windowActive = false
 
 time = 0
-uploadPacketInterval = 1
+uploadPacketInterval = 0.1
 uploadPacketStep = uploadPacketInterval
 
 ---@type UIElement[]
