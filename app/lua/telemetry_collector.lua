@@ -15,6 +15,9 @@ end
 function DBLink:uploadPacket(packet)
     url = string.format("http://localhost:%d/appendTelemetryCSV", self.port)
     body = ToCSV(packet)
+
+    ac.log(body)
+
     header = {
         ["Content-Type"] = "text/csv"
     }
@@ -30,6 +33,28 @@ function DBLink:uploadPacket(packet)
     end)
     
 
+end
+
+---@param packet table
+function GetCSVHeaders(packet)
+    csvHeaders = ""
+    for k, _ in pairs(packet) do
+        csvHeaders = csvHeaders .. string.format("%s,", tostring(k))
+    end
+    return string.sub(csvHeaders, 1, -2) .. "\n"
+end
+
+---@param packet table
+function GetCSVBody(packet)
+    csvData = ""
+    for _, v in pairs(packet) do
+        if (type(v) == "number") then
+            csvData = csvData .. string.format("%s,", string.format("%s", v))
+        else
+            csvData = csvData .. string.format("%s,", v)
+        end
+    end
+    return string.sub(csvData, 1, -2) .. "\n"
 end
 
 ---@param packet table

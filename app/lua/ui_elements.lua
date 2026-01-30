@@ -59,6 +59,14 @@ function UIElement:clearElements()
     table.clear(self.internalElements)
 end
 
+function UIElement:onMouseEnter()
+
+end
+
+function UIElement:onMouseLeave()
+    
+end
+
 function UIElement:draw()
     ui.transparentWindow("Element", self.pos, self.size, function()
         ui.drawRectFilled(vec2(0, 0), self.size, self.color)
